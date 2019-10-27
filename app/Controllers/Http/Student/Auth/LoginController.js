@@ -1,93 +1,51 @@
 'use strict'
-
-/** @typedef {import('@adonisjs/framework/src/Request')} Request */
-/** @typedef {import('@adonisjs/framework/src/Response')} Response */
-/** @typedef {import('@adonisjs/framework/src/View')} View */
-
-/**
- * Resourceful controller for interacting with logins
- */
+const { validateAll } = use('Validator')
+const User = use('App/Models/User')
 class LoginController {
-  /**
-   * Show a list of all logins.
-   * GET logins
-   *
-   * @param {object} ctx
-   * @param {Request} ctx.request
-   * @param {Response} ctx.response
-   * @param {View} ctx.view
-   */
-  async index ({ request, response, view }) {
+
+  async store({ request, response, auth }) {
+    const rules = {
+      email: 'required|email',
+      password: 'required|min:8',
+    }
+    const messages = {
+      'password.required': 'You must provide a password',
+      'email.required': 'You must provide a email address.',
+      'email.email': 'You must provide a valid email address.',
+      'password.min': 'Password must be at least 8 characters'
+    }
+    const validation = await validateAll(request.all(), rules, messages)
+    if (validation.fails()) {
+      response.send({ error: validation.messages() })
+    } else {
+      const { email, password } = request.all();
+      try {
+        const check_user = await auth.attempt(email, password)
+        if (check_user) {
+          const user = await User
+            .query()
+            .with('tokens')
+            .where('is_verified', true)
+            .first()
+          if (user === null) {
+            response.send({ 'message': 'verified your email first' })
+          } else {
+            response.send({ user })
+          }
+
+        }
+
+      } catch (error) {
+        if (error.name === "UserNotFoundException") {
+          response.send({ "error": `Cannot find user with email ${email}` })
+        }
+        if (error.name === "PasswordMisMatchException") {
+          response.send({ "error": `Invalid password` })
+        }
+      }
+    }
   }
 
-  /**
-   * Render a form to be used for creating a new login.
-   * GET logins/create
-   *
-   * @param {object} ctx
-   * @param {Request} ctx.request
-   * @param {Response} ctx.response
-   * @param {View} ctx.view
-   */
-  async create ({ request, response, view }) {
-  }
-
-  /**
-   * Create/save a new login.
-   * POST logins
-   *
-   * @param {object} ctx
-   * @param {Request} ctx.request
-   * @param {Response} ctx.response
-   */
-  async store ({ request, response }) {
-  }
-
-  /**
-   * Display a single login.
-   * GET logins/:id
-   *
-   * @param {object} ctx
-   * @param {Request} ctx.request
-   * @param {Response} ctx.response
-   * @param {View} ctx.view
-   */
-  async show ({ params, request, response, view }) {
-  }
-
-  /**
-   * Render a form to update an existing login.
-   * GET logins/:id/edit
-   *
-   * @param {object} ctx
-   * @param {Request} ctx.request
-   * @param {Response} ctx.response
-   * @param {View} ctx.view
-   */
-  async edit ({ params, request, response, view }) {
-  }
-
-  /**
-   * Update login details.
-   * PUT or PATCH logins/:id
-   *
-   * @param {object} ctx
-   * @param {Request} ctx.request
-   * @param {Response} ctx.response
-   */
-  async update ({ params, request, response }) {
-  }
-
-  /**
-   * Delete a login with id.
-   * DELETE logins/:id
-   *
-   * @param {object} ctx
-   * @param {Request} ctx.request
-   * @param {Response} ctx.response
-   */
-  async destroy ({ params, request, response }) {
-  }
 }
 
 module.exports = LoginController

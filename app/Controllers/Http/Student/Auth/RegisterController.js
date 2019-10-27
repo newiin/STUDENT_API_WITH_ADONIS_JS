@@ -1,92 +1,54 @@
 'use strict'
-
-/** @typedef {import('@adonisjs/framework/src/Request')} Request */
-/** @typedef {import('@adonisjs/framework/src/Response')} Response */
-/** @typedef {import('@adonisjs/framework/src/View')} View */
-
-/**
- * Resourceful controller for interacting with registers
- */
+const { validateAll } = use('Validator')
+const User = use('App/Models/User')
+const Token = use('App/Models/Token')
+const Event = use('Event')
 class RegisterController {
-  /**
-   * Show a list of all registers.
-   * GET registers
-   *
-   * @param {object} ctx
-   * @param {Request} ctx.request
-   * @param {Response} ctx.response
-   * @param {View} ctx.view
-   */
-  async index ({ request, response, view }) {
+  async store({ request, response, auth }) {
+    const rules = {
+      email: 'required|email|unique:users,email',
+      surname: 'required',
+      name: 'required',
+      dob: 'required|date',
+      password: 'required|min:8|alpha_numeric',
+      address: 'required',
+      phone: 'required|number',
+    }
+    const messages = {
+      'email.required': 'You must provide a email address.',
+      'email.email': 'You must provide a valid email address.',
+      'email.unique': 'This email is already used.',
+      'password.required': 'You must provide a password',
+      'surname.required': 'You must provide Your surname',
+      'password.min': 'Password must be at least  8 characters'
+    }
+    const validation = await validateAll(request.all(), rules, messages)
+    if (validation.fails()) {
+      response.send({ error: validation.messages() })
+    } else {
+      try {
+        const user = await User.create(request.except(['csrf_token']))
+        const { token, type } = await auth.generate(user)
+        await user.tokens().create({ token: token, type: type, is_revoked: false })
+        Event.fire('new::user', { user, token })
+        return response.send({ "message": "confirm your email address", "access_token": token })
+      } catch (error) {
+        return response.send({ errors: error.message })
+      }
+    }
+
   }
 
-  /**
-   * Render a form to be used for creating a new register.
-   * GET registers/create
-   *
-   * @param {object} ctx
-   * @param {Request} ctx.request
-   * @param {Response} ctx.response
-   * @param {View} ctx.view
-   */
-  async create ({ request, response, view }) {
+
+  async show({ params, request, response, view }) {
   }
 
-  /**
-   * Create/save a new register.
-   * POST registers
-   *
-   * @param {object} ctx
-   * @param {Request} ctx.request
-   * @param {Response} ctx.response
-   */
-  async store ({ request, response }) {
+
+  async update({ params, request, response }) {
   }
 
-  /**
-   * Display a single register.
-   * GET registers/:id
-   *
-   * @param {object} ctx
-   * @param {Request} ctx.request
-   * @param {Response} ctx.response
-   * @param {View} ctx.view
-   */
-  async show ({ params, request, response, view }) {
-  }
 
-  /**
-   * Render a form to update an existing register.
-   * GET registers/:id/edit
-   *
-   * @param {object} ctx
-   * @param {Request} ctx.request
-   * @param {Response} ctx.response
-   * @param {View} ctx.view
-   */
-  async edit ({ params, request, response, view }) {
-  }
-
-  /**
-   * Update register details.
-   * PUT or PATCH registers/:id
-   *
-   * @param {object} ctx
-   * @param {Request} ctx.request
-   * @param {Response} ctx.response
-   */
-  async update ({ params, request, response }) {
-  }
-
-  /**
-   * Delete a register with id.
-   * DELETE registers/:id
-   *
-   * @param {object} ctx
-   * @param {Request} ctx.request
-   * @param {Response} ctx.response
-   */
-  async destroy ({ params, request, response }) {
+  async destroy({ params, request, response }) {
   }
 }
 

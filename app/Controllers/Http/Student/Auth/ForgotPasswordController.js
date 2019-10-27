@@ -1,92 +1,38 @@
 'use strict'
-
-/** @typedef {import('@adonisjs/framework/src/Request')} Request */
-/** @typedef {import('@adonisjs/framework/src/Response')} Response */
-/** @typedef {import('@adonisjs/framework/src/View')} View */
-
-/**
- * Resourceful controller for interacting with forgotpasswords
- */
+const { validateAll } = use('Validator')
+const User = use('App/Models/User')
+const Mail = use('Mail')
 class ForgotPasswordController {
-  /**
-   * Show a list of all forgotpasswords.
-   * GET forgotpasswords
-   *
-   * @param {object} ctx
-   * @param {Request} ctx.request
-   * @param {Response} ctx.response
-   * @param {View} ctx.view
-   */
-  async index ({ request, response, view }) {
-  }
-
-  /**
-   * Render a form to be used for creating a new forgotpassword.
-   * GET forgotpasswords/create
-   *
-   * @param {object} ctx
-   * @param {Request} ctx.request
-   * @param {Response} ctx.response
-   * @param {View} ctx.view
-   */
-  async create ({ request, response, view }) {
-  }
-
-  /**
-   * Create/save a new forgotpassword.
-   * POST forgotpasswords
-   *
-   * @param {object} ctx
-   * @param {Request} ctx.request
-   * @param {Response} ctx.response
-   */
-  async store ({ request, response }) {
-  }
-
-  /**
-   * Display a single forgotpassword.
-   * GET forgotpasswords/:id
-   *
-   * @param {object} ctx
-   * @param {Request} ctx.request
-   * @param {Response} ctx.response
-   * @param {View} ctx.view
-   */
-  async show ({ params, request, response, view }) {
-  }
-
-  /**
-   * Render a form to update an existing forgotpassword.
-   * GET forgotpasswords/:id/edit
-   *
-   * @param {object} ctx
-   * @param {Request} ctx.request
-   * @param {Response} ctx.response
-   * @param {View} ctx.view
-   */
-  async edit ({ params, request, response, view }) {
-  }
-
-  /**
-   * Update forgotpassword details.
-   * PUT or PATCH forgotpasswords/:id
-   *
-   * @param {object} ctx
-   * @param {Request} ctx.request
-   * @param {Response} ctx.response
-   */
-  async update ({ params, request, response }) {
-  }
-
-  /**
-   * Delete a forgotpassword with id.
-   * DELETE forgotpasswords/:id
-   *
-   * @param {object} ctx
-   * @param {Request} ctx.request
-   * @param {Response} ctx.response
-   */
-  async destroy ({ params, request, response }) {
+  async store({ request, response, auth }) {
+    const rules = {
+      email: 'required|email',
+    }
+    const messages = {
+      'email.required': 'You must provide a email address.',
+      'email.email': 'You must provide a valid email address.',
+    }
+    const validation = await validateAll(request.all(), rules, messages)
+    if (validation.fails()) {
+      return response.send({ error: validation.messages() })
+    }
+    const { email } = request.all()
+    try {
+      const user = await User.findBy('email', email)
+      if (user) {
+        const { token } = await auth.generate(user)
+        await user.tokens().create({ token: token, type: 'forgot' })
+        const data = { user: user.toJSON(), token: token }
+        await Mail.send('emails.forgot', data, (message) => {
+          message.to(user.email)
+          message.from('studentapi@email.com')
+        })
+        response.send({ message: 'An email has been sent to you' })
+      } else {
+        response.send({ message: 'this account is not reconize' })
+      }
+    } catch (error) {
+      response.send({ error })
+    }
   }
 }
 
