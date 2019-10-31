@@ -1,24 +1,22 @@
 'use strict'
-const Token = use('App/Models/Token')
+
 const User = use('App/Models/User')
 class EmailConfirmationController {
 
   async confirmation({ params, response }) {
     const { token } = params
     try {
-      const tokens = await Token
+      const user = await User
         .query()
-        .with('user')
-        .where('token', '=', token)
+        .where('email_verification_token', '=', token)
         .first()
-
-      const user = new User()
-      user.is_verified = true
-      await tokens.user().update(user)
-      return response.send({ tokens, message: "your account has been verify Login to your account" })
+      user.is_verified = true;
+      user.email_verification_token = null
+      user.save();
+      return response.send({ message: "your account has been verify go to login page" })
     } catch (error) {
 
-      return response.send({ "error": error })
+      return response.send({ error })
     }
   }
 

@@ -1,7 +1,7 @@
 'use strict'
+const uuidv4 = require('uuid/v4');
 const { validateAll } = use('Validator')
 const User = use('App/Models/User')
-const Token = use('App/Models/Token')
 const Event = use('Event')
 class RegisterController {
   async store({ request, response, auth }) {
@@ -27,11 +27,13 @@ class RegisterController {
       response.send({ error: validation.messages() })
     } else {
       try {
-        const user = await User.create(request.except(['csrf_token']))
+        const { email, name, surname, dob, address, phone, password } = request.all()
+        const email_token = uuidv4()
+        const user = await User.create({ email, name, surname, dob, address, phone, password, email_verification_token: email_token })
         const { token, type } = await auth.generate(user)
         await user.tokens().create({ token: token, type: type, is_revoked: false })
-        Event.fire('new::user', { user, token })
-        return response.send({ "message": "confirm your email address", "access_token": token })
+        Event.fire('new::user', { user, email_token })
+        return response.send({ message: "confirm your email address" })
       } catch (error) {
         return response.send({ errors: error.message })
       }

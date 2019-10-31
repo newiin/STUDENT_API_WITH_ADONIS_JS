@@ -17,26 +17,11 @@ const globalMiddleware = [
   'App/Middleware/ConvertEmptyStringsToNull'
 ]
 
-/*
-|--------------------------------------------------------------------------
-| Named Middleware
-|--------------------------------------------------------------------------
-|
-| Named middleware is key/value object to conditionally add middleware on
-| specific routes or group of routes.
-|
-| // define
-| {
-|   auth: 'Adonis/Middleware/Auth'
-| }
-|
-| // use
-| Route.get().middleware('auth')
-|
-*/
+
 const namedMiddleware = {
-  auth: 'Adonis/Middleware/Auth',
-  guest: 'Adonis/Middleware/AllowGuestOnly'
+  auth: 'App/Middleware/Authenticated',
+  teacher: 'App/Middleware/Isteacher',
+  admin: 'App/Middleware/Admin',
 }
 
 /*

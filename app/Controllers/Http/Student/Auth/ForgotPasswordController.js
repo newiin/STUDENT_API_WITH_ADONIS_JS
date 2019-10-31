@@ -2,6 +2,7 @@
 const { validateAll } = use('Validator')
 const User = use('App/Models/User')
 const Mail = use('Mail')
+const uuidv4 = require('uuid/v4');
 class ForgotPasswordController {
   async store({ request, response, auth }) {
     const rules = {
@@ -16,11 +17,16 @@ class ForgotPasswordController {
       return response.send({ error: validation.messages() })
     }
     const { email } = request.all()
+
     try {
       const user = await User.findBy('email', email)
+
+
       if (user) {
-        const { token } = await auth.generate(user)
-        await user.tokens().create({ token: token, type: 'forgot' })
+
+        const token = uuidv4()
+        user.password_forget_token = token
+        user.save()
         const data = { user: user.toJSON(), token: token }
         await Mail.send('emails.forgot', data, (message) => {
           message.to(user.email)
